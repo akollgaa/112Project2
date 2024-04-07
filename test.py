@@ -1,12 +1,14 @@
 from cmu_graphics import *
+import numpy as np
 
-def onAppStart(app):
-    pass
+first = [1, 2, 3]
+second = [4, 5, 6]
 
-def redrawAll(app):
-    pass
+first = np.transpose(np.array(first))
+second = np.transpose(np.array(second))
+print(first - second)
 
-def main():
-    runApp()
+first = np.append(first, [[1]])
 
-main()
+thing = {1: 2, 3: 4, 0: 6}
+print(thing.sort())
