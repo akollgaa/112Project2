@@ -1,10 +1,10 @@
 # Data structure for any physical object that should be displayed
-class Object:
+class Shape:
     
     # points is a list of tuples, (x, y, z)
-    def __init__(self, points):
-        
+    def __init__(self, points, color):
         self.points = points
+        self.color = color
 
     def __repr__(self):
         pointDescription = ''
@@ -14,8 +14,12 @@ class Object:
         return 'Points(' + pointDescription + ')'
     
     def __eq__(self, other):
-        return (isinstance(other, Object) and 
-                self.points == other.points)
+        return (isinstance(other, Shape) and 
+                self.points == other.points and
+                self.color == other.color)
+    
+    def __hash__(self):
+        return hash(str(self))
 
     def addPoint(self, point):
         self.points.append(point)
