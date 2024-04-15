@@ -1,14 +1,16 @@
 from cmu_graphics import *
 import numpy as np
 
-first = [1, 2, 3]
-second = [4, 5, 6]
+first = np.array([1, 2, 3, 4])
 
-first = np.transpose(np.array(first))
-second = np.transpose(np.array(second))
-print(first - second)
+modelMatrix = np.array([[1, 0, 0, 0],
+                        [0, 1, 0, 0],
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1]])
 
-first = np.append(first, [[1]])
+print(first)
 
-thing = {1: 2, 3: 4, 0: 6}
-print(thing.sort())
+print(np.dot(modelMatrix, first))
+
+print(np.dot(modelMatrix, np.transpose(first)))
+

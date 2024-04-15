@@ -6,46 +6,48 @@ def onAppStart(app):
     app.height = 768
     app.direction = []
     app.move = []
-    app.stepsPerSecond = 20
+    app.stepsPerSecond = 40
     app.engine = Graphics(app.width, app.height)
     addShapes(app)
 
 def addShapes(app):
-    front = [(-1, 1, 2),
+    front = [(-1, 1, 0),
+            (1, 1, 0),
+            (1, -1, 0),
+            (-1, -1, 0)]
+    back = [(-1, 1, 2),
             (1, 1, 2),
             (1, -1, 2),
             (-1, -1, 2)]
-    back = [(-1, 1, 3),
-            (1, 1, 3),
-            (1, -1, 3),
-            (-1, -1, 3)]
-    left = [(-1, 1, 2),
-            (-1, 1, 3),
-            (-1, -1, 3),
-            (-1, -1, 2)]
-    right = [(1, 1, 2),
-            (1, 1, 3),
-            (1, -1, 3),
-            (1, -1, 2)]
-    top = [(-1, 1, 2),
-            (-1, 1, 3),
-            (1, 1, 3),
-            (1, 1, 2)]
-    bottom = [(-1, -1, 2),
-            (-1, -1, 3),
-            (1, -1, 3),
-            (1, -1, 2)]
+    left = [(-1, 1, 0),
+            (-1, 1, 2),
+            (-1, -1, 2),
+            (-1, -1, 0)]
+    right = [(1, 1, 0),
+            (1, 1, 2),
+            (1, -1, 2),
+            (1, -1, 0)]
+    top = [(-1, 1, 0),
+            (-1, 1, 2),
+            (1, 1, 2),
+            (1, 1, 0)]
+    bottom = [(-1, -1, 0),
+            (-1, -1, 2),
+            (1, -1, 2),
+            (1, -1, 0)]
     floor = [(-20, 0, 20),
              (20, 0, 20),
              (20, 0, -20),
              (-20, 0, -20)]
-    app.engine.addShape(front, 'red')
-    app.engine.addShape(back, 'yellow')
-    app.engine.addShape(left, 'green')
-    app.engine.addShape(right, 'blue')
-    app.engine.addShape(bottom, 'purple')
-    app.engine.addShape(top, 'orange')
-    #app.engine.addShape(floor, 'green')
+    cube = [(front, 'red'),
+             (back, 'yellow'),
+             (left, 'green'),
+             (right, 'blue'),
+             (bottom, 'purple'),
+             (top, 'orange')]
+    floor = [(floor, 'green')]
+    app.engine.addShape(cube, (0, 0, 2))
+    app.engine.addShape(floor, (0, -2, 0))
 
 def redrawAll(app):
     allPoints, colors, indexes = app.engine.render()
@@ -56,9 +58,9 @@ def redrawAll(app):
     drawMouseBox(app)
 
 def drawCameraStatus(app):
-    drawLabel(f'({app.engine.cameraPosition[0]:0.1f}, {app.engine.cameraPosition[1]:0.1f}, {app.engine.cameraPosition[2]:0.1f})', 40, 20)
-    drawLabel(f'({app.engine.cameraOrientation[0]:0.1f}, {app.engine.cameraOrientation[1]:0.1f}, {app.engine.cameraOrientation[2]:0.1f})', 40, 50)
-    drawLabel(f'({app.engine.fov:0.1f})', 40, 80)
+    drawLabel(f'({app.engine.cameraPosition[0]:0.1f}, {app.engine.cameraPosition[1]:0.1f}, {app.engine.cameraPosition[2]:0.1f})', 50, 20)
+    drawLabel(f'({app.engine.cameraOrientation[0]:0.1f}, {app.engine.cameraOrientation[1]:0.1f}, {app.engine.cameraOrientation[2]:0.1f})', 50, 50)
+    drawLabel(f'({app.engine.fov:0.1f})', 50, 80)
 
 def drawMouseBox(app):
     drawLine(app.width / 3, 0, app.width / 3, app.height, lineWidth=3)
@@ -67,6 +69,9 @@ def drawMouseBox(app):
     drawLine(0, app.height * 2/3, app.width, app.height * 2/3, lineWidth=3)
 
 def onKeyPress(app, key):
+    if key == 'r':
+        app.engine.resetCamera()
+
     if key == 'w':
         #app.engine.moveCameraPosition(0, 0, 1)
         app.move.append('w')
@@ -107,15 +112,20 @@ def onKeyRelease(app, key):
         app.move.remove('a')
 
 def onMouseMove(app, mouseX, mouseY):
-    if mouseX < app.width / 3:
-        app.direction.append('left')
-    elif 'left' in app.direction:
-        app.direction.remove('left')
+    p = app.engine.cameraOrientation[0]
+    r = app.engine.cameraOrientation[1]
+    y = app.engine.cameraOrientation[2]
+    y = (1 - (mouseX / app.width)) * 360 - 180
+    app.engine.cameraOrientation = [p, r, y]
+    # if mouseX < app.width / 3:
+    #     app.direction.append('left')
+    # elif 'left' in app.direction:
+    #     app.direction.remove('left')
 
-    if mouseX > app.width * 2/3:
-        app.direction.append('right')
-    elif 'right' in app.direction:
-        app.direction.remove('right')
+    # if mouseX > app.width * 2/3:
+    #     app.direction.append('right')
+    # elif 'right' in app.direction:
+    #     app.direction.remove('right')
 
     if mouseY < app.height / 3:
         app.direction.append('up')
@@ -137,10 +147,10 @@ def onStep(app):
     
     rate = 0.1
     for move in app.move:
-        if move == 'w': app.engine.moveCameraPosition(0, 0, 1)
-        elif move == 's': app.engine.moveCameraPosition(0, 0, -1)
-        elif move == 'd': app.engine.moveCameraPosition(1, 0, 0)
-        elif move == 'a': app.engine.moveCameraPosition(-1, 0, 0)
+        if move == 'w': app.engine.moveCameraPosition(0, 0, -1)
+        elif move == 's': app.engine.moveCameraPosition(0, 0, 1)
+        elif move == 'd': app.engine.moveCameraPosition(-1, 0, 0)
+        elif move == 'a': app.engine.moveCameraPosition(1, 0, 0)
 
 def main():
     runApp(height=768, width=1024)
