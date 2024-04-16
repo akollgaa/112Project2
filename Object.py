@@ -2,17 +2,19 @@
 class Shape:
     
     # shape is a collection of tuples that contain a polygon and color
-    def __init__(self, shape, position=(0, 0, 0), flipAxis=True):
+    # We naturally want to flip the axis because the camera will render everything upsidedown
+    def __init__(self, shape, position=[0, 0, 0], orientation=[0, 0, 0], flipAxis=True):
         self.polygons = []
         self.position = position
+        self.orientation = orientation
         for points, color in shape:
             self.polygons.append(Polygon(points, color))
         
-        if flipAxis:
-            self.position = (position[0], -position[1], position[2])
+        # if flipAxis:
+        #    self.position[2] *= -1
 
     def __repr__(self):
-        return f'Shape containing {len(self.polygons)} polygons'
+        return f'Shape containing {len(self.polygons)} polygons at ({self.position})'
     
     def __eq__(self, other):
         return (isinstance(other, Shape) and 
@@ -21,7 +23,37 @@ class Shape:
     def __hash__(self):
         return hash(str(self))
     
+    def movePosition(self, dx, dy, dz):
+        self.position[0] += dx
+        self.position[1] += dy
+        self.position[2] += dz
+
+    # Pitch, Roll, Yaw
+    def moveOrientation(self, dp, dr, dy):
+        self.orientation[0] += dp
+        self.orientation[1] += dr
+        self.orientation[2] += dy
+
+    # calculates midpoint with respect to its position
+    def calculateMidpoint(self, addPosition=True):
+        xMid, yMid, zMid = 0, 0, 0
+        for polygon in self.polygons:
+            xSum, ySum, zSum = 0, 0, 0
+            for x, y, z in polygon.points:
+                xSum += x
+                ySum += y
+                zSum -= z
+            xMid += xSum / len(polygon.points)
+            yMid += ySum / len(polygon.points)
+            zMid += zSum / len(polygon.points)
+        result = (xMid / len(self.polygons), yMid / len(self.polygons), zMid / len(self.polygons))
+        if addPosition:
+            return (result[0] + self.position[0], result[1] + self.position[1], result[2] + self.position[2])
+        return result
+
 class Polygon:
+
+    # We naturally want to flip the axis because the camera will render everything upsidedown
     def __init__(self, points, color, flipAxis=True):
         self.points = points # list of tuple of points
         self.color = color
@@ -30,7 +62,6 @@ class Polygon:
             for point in self.points:
                 newPoints.append((point[0], -point[1], point[2]))
             self.points = newPoints
-            print(self.points)
 
     def __repr__(self):
         pointDescription = ''
@@ -46,3 +77,14 @@ class Polygon:
     
     def __hash__(self):
         return hash(str(self))
+    
+    def calculateMidpoint(self):
+        xSum, ySum, zSum = 0, 0, 0
+        for x, y, z in self.points:
+            xSum += x
+            ySum += y
+            zSum += z
+        xMid = xSum / len(self.points)
+        yMid = ySum / len(self.points)
+        zMid = zSum / len(self.points)
+        return (xMid, yMid, zMid)
