@@ -37,6 +37,33 @@ def createRectangularPrism(width, length, height):
              (top, 'orange')]
     return prism
 
+class Building(Shape):
+
+    def __init__(self, shape, position):
+        super().__init__(shape, position)
+
+class Projectile(Shape):
+
+    def __init__(self, shape, speed, power, direction, position=(0, 0, 0), orientation=(0, 0, 0)):
+        super().__init__(shape, position, orientation)
+        self.speed = speed # Can be negative to indicate direction
+        self.power = power
+        self.direction = direction
+        self.distanceTraveled = 0
+
+    # Not the most elegant way, but because position is a tuple not much I can do
+    def move(self):
+        self.distanceTraveled += abs(self.speed)
+        if self.direction == 0:
+            dx = self.speed
+            self.position = (self.position[0] + dx, self.position[1], self.position[2])
+        elif self.direction == 1:
+            dy = self.speed
+            self.position = (self.position[0], self.position[1] + dy, self.position[2])
+        elif self.direction == 2:
+            dz = self.speed
+            self.position = (self.position[0], self.position[1], self.position[2] + dz)
+
 class Ship(Shape):
 
     def __init__(self, shape, captain, speed, jerk):

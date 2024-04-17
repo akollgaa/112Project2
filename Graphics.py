@@ -3,17 +3,20 @@ import numpy as np
 import math
 import copy
 from Model import Ship
+from Model import Projectile
 
 class Graphics:
 
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.cameraPosition = [0, 0, 0] # x, y, z
-        self.cameraOrientation = [0, 0, 0] # pitch, roll, yaw
+        self.cameraPosition = [0, 5, 0] # x, y, z
+        self.cameraOrientation = [-20, 0, 0] # pitch, roll, yaw
         self.fov = math.pi / 2
         self.shapes = []
         self.ships = []
+        self.projectiles = []
+        self.shapesToRemove = set()
 
         # We only need to calculate the perspectiveMatrix once and then reference later
         # Aspect Ratio
@@ -21,7 +24,7 @@ class Graphics:
         f = 1 / math.tan(self.fov / 2)
         # normalization constant
         # Assuming camera is at origin looking down z axis
-        znear = 0.1
+        znear = 1
         zfar =  100
         l = zfar / (zfar - znear)
         # Converts points based on fov, aspect ratio, and depth
@@ -30,11 +33,30 @@ class Graphics:
                                         [    0,  0, l, -l * znear],
                                         [    0,  0, 1,          0]])
 
+    def addProjectile(self, shape, speed, power, direction, position=(0, 0, 0), orientation=(0, 0, 0)):
+        self.projectiles.append(Projectile(shape, speed, power, direction, position, orientation))
+
     def addShip(self, shape, captain, speed, jerk):
         self.ships.append(Ship(shape, captain, speed, jerk))
 
     def addShape(self, shape, position=[0, 0, 0], orientation=[0, 0, 0]):
         self.shapes.append(Shape(shape, position, orientation))
+
+    def removeShapes(self):
+        removed = False
+        for shape in self.shapesToRemove:
+            self.shapes.remove(shape)
+            removed = True
+        self.shapesToRemove = set()
+        return removed
+    
+    def removeProjectile(self):
+        projectilesToRemove = []
+        for projectile in self.projectiles:
+            if projectile.distanceTraveled > 100:
+                projectilesToRemove.append(projectile)
+        for projectile in projectilesToRemove:
+            self.projectiles.remove(projectile)
 
     def resetCamera(self):
         self.cameraPosition = [0, 0, 0] # x, y, z
@@ -43,14 +65,18 @@ class Graphics:
     def resetCameraToShip(self):
         if len(self.ships) == 0:
             return
-        self.cameraPosition = copy.copy(self.ships[0].position)
-        self.cameraPosition[2] += 12
-        self.cameraPosition[1] += 4
+        dx = self.ships[0].position[0] - self.cameraPosition[0]
+        dy = self.ships[0].position[1] - (self.cameraPosition[1])
+        dz = self.ships[0].position[2] - (self.cameraPosition[2])
+        self.moveCameraPosition(dx, dy + 4, dz + 12)
+        # self.cameraPosition = list(self.ships[0].position)
+        # self.cameraPosition[2] += 12
+        # self.cameraPosition[1] += 4
 
     def resetShipToCamera(self):
         if len(self.ships) == 0:
             return
-        self.ships[0].position = copy.copy(self.cameraPosition)
+        self.ships[0].position = (self.cameraPosition[0], self.cameraPosition[1], self.cameraPosition[2])
         self.ships[0].moveShip(0, -4, 12)
 
     # Might not be neccesary
@@ -186,6 +212,9 @@ class Graphics:
         shapeIndexes = []
         for shape in self.shapes:
             shapeMidPoint = shape.calculateMidpoint(True)
+            if shapeMidPoint[2] <= self.cameraPosition[2]:
+                self.shapesToRemove.add(shape)
+                continue
             dist = self.distance(self.cameraPosition, shapeMidPoint)
             allPoints = dict()
             colors = dict()
@@ -207,6 +236,20 @@ class Graphics:
             indexes = []
             for polygon in ship.polygons:
                 points, zIndex = self.renderPolygon(polygon, ship.position, ship.orientation)
+                allPoints[zIndex] = points
+                colors[zIndex] = polygon.color
+                indexes.append(zIndex)
+            shapes[dist] = (allPoints, colors, sorted(indexes, reverse=False))
+            shapeIndexes.append(dist)
+
+        for projectile in self.projectiles:
+            shapeMidPoint = projectile.calculateMidpoint(True)
+            dist = self.distance(self.cameraPosition, shapeMidPoint)
+            allPoints = dict()
+            colors = dict()
+            indexes = []
+            for polygon in projectile.polygons:
+                points, zIndex = self.renderPolygon(polygon, projectile.position, projectile.orientation)
                 allPoints[zIndex] = points
                 colors[zIndex] = polygon.color
                 indexes.append(zIndex)

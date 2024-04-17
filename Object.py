@@ -3,7 +3,7 @@ class Shape:
     
     # shape is a collection of tuples that contain a polygon and color
     # We naturally want to flip the axis because the camera will render everything upsidedown
-    def __init__(self, shape, position=[0, 0, 0], orientation=[0, 0, 0], flipAxis=True):
+    def __init__(self, shape, position=(0, 0, 0), orientation=(0, 0, 0), flipAxis=True):
         self.polygons = []
         self.position = position
         self.orientation = orientation
@@ -24,15 +24,11 @@ class Shape:
         return hash(str(self))
     
     def movePosition(self, dx, dy, dz):
-        self.position[0] += dx
-        self.position[1] += dy
-        self.position[2] += dz
+        self.position = (self.position[0] + dx, self.position[1] + dy, self.position[2] + dz)
 
     # Pitch, Roll, Yaw
     def moveOrientation(self, dp, dr, dy):
-        self.orientation[0] += dp
-        self.orientation[1] += dr
-        self.orientation[2] += dy
+        self.orientation = (self.orientation[0] + dp, self.orientation[1] + dr, self.orientation[2] + dy)
 
     # calculates midpoint with respect to its position
     def calculateMidpoint(self, addPosition=True):
