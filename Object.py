@@ -9,26 +9,30 @@ class Shape:
         self.orientation = orientation
         for points, color in shape:
             self.polygons.append(Polygon(points, color))
-        
-        # if flipAxis:
-        #    self.position[2] *= -1
+        self.midpoint = self.calculateMidpoint()
 
     def __repr__(self):
         return f'Shape containing {len(self.polygons)} polygons at ({self.position})'
     
     def __eq__(self, other):
         return (isinstance(other, Shape) and 
-                self.polygons == other.polygons)
+                self.polygons == other.polygons and 
+                self.position == other.position and
+                self.orientation == other.orientation)
     
     def __hash__(self):
         return hash(str(self))
     
     def movePosition(self, dx, dy, dz):
         self.position = (self.position[0] + dx, self.position[1] + dy, self.position[2] + dz)
+        self.updateMidPoint()
 
     # Pitch, Roll, Yaw
     def moveOrientation(self, dp, dr, dy):
         self.orientation = (self.orientation[0] + dp, self.orientation[1] + dr, self.orientation[2] + dy)
+
+    def updateMidPoint(self):
+        self.midpoint = self.calculateMidpoint()
 
     # calculates midpoint with respect to its position
     def calculateMidpoint(self, addPosition=True):
@@ -48,7 +52,6 @@ class Shape:
         return result
 
 class Polygon:
-
     # We naturally want to flip the axis because the camera will render everything upsidedown
     def __init__(self, points, color, flipAxis=True):
         self.points = points # list of tuple of points

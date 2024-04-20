@@ -71,7 +71,7 @@ class Ship(Shape):
         self.captain = captain
         self.speed = speed
         self.jerk = jerk
-
+        
     def __repr__(self):
         return f"{self.captain} is the captain: Speed({self.speed}) and Jerk({self.jerk}) at ({self.position})"
     
@@ -84,6 +84,6 @@ class Ship(Shape):
     
     def moveShip(self, dx, dy, dz):
         super().movePosition(dx, dy, dz)
-    
+
     def tiltShip(self, dp, dr, dy):
         super().moveOrientation(dp, dr, dy)

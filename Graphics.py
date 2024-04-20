@@ -1,7 +1,6 @@
 from Object import Shape
 import numpy as np
 import math
-import copy
 from Model import Ship
 from Model import Projectile
 
@@ -62,6 +61,7 @@ class Graphics:
         self.cameraPosition = [0, 0, 0] # x, y, z
         self.cameraOrientation = [0, 0, 0] # pitch, roll, yaw
 
+    # This is quite buggy
     def resetCameraToShip(self):
         if len(self.ships) == 0:
             return
@@ -69,22 +69,12 @@ class Graphics:
         dy = self.ships[0].position[1] - (self.cameraPosition[1])
         dz = self.ships[0].position[2] - (self.cameraPosition[2])
         self.moveCameraPosition(dx, dy + 4, dz + 12)
-        # self.cameraPosition = list(self.ships[0].position)
-        # self.cameraPosition[2] += 12
-        # self.cameraPosition[1] += 4
 
     def resetShipToCamera(self):
         if len(self.ships) == 0:
             return
         self.ships[0].position = (self.cameraPosition[0], self.cameraPosition[1], self.cameraPosition[2])
         self.ships[0].moveShip(0, -4, 12)
-
-    # Might not be neccesary
-    def getObjectIndex(self, object):
-        if object in self.objects:
-            return self.objects.find(object)
-        else:
-            return None
 
     # Moves the camera by some constant direction
     def moveCameraPosition(self, dx, dy, dz):
@@ -102,99 +92,92 @@ class Graphics:
     def moveFOV(self, angle):
         self.fov += angle
 
-    # Point is a tuple (x, y, z)
-    # All of the math is from https://en.m.wikipedia.org/wiki/3D_projection
+    # Point and position is a tuple (x, y, z)
+    # Orientation is a tuple of (pitch, roll, yaw)
+    # Some of the math was learned from
+    # https://www.3dgep.com/understanding-the-view-matrix/
+    # https://www.youtube.com/watch?v=EqNcqBdrNyI&ab_channel=pikuma
     # Returns a (x, y) that can be placed on the screen
-    def renderPoint(self, point, position, orientation):
-        # Creates a 4x1 vector containing the direction of the point with respect to the origin(0,0,0)
-        # Subtracting the camera will move the point relative to the position of the camera
-        
-        #camera = np.append(self.cameraPosition, [[2]])
+    def renderPoint(self, point, modelMatrix, cameraTransformMatrix):
+        # We must convert our point tuple to a np array
         vector = np.transpose(np.array([point[0], point[1], point[2], 1]))
-        #vector = camera - point
-
-        modelMatrix = self.createModelMatrix(position, orientation)
-
-        cameraTranslationMatrix = np.array([[1, 0, 0, self.cameraPosition[0]],
-                                            [0, 1, 0, self.cameraPosition[1]],
-                                            [0, 0, 1, self.cameraPosition[2]],
-                                            [0, 0, 0, 1]])
-        # Converts points based on camera yaw angle
-        theta1 = (self.cameraOrientation[2]) * (math.pi / 180)
-        theta2 = (self.cameraOrientation[0]) * (math.pi / 180)
-        cameraRotationYMatrix = np.array([[ math.cos(theta1), 0, math.sin(theta1), 0],
-                                            [               0, 1,               0, 0],
-                                            [-math.sin(theta1), 0, math.cos(theta1), 0],
-                                            [               0, 0,               0, 1]])
         
-        cameraRotationXMatrix = np.array([[1,               0,                0, 0],
-                                            [0, math.cos(theta2), -math.sin(theta2), 0],
-                                            [0, math.sin(theta2),  math.cos(theta2), 0],
-                                            [0,               0,                0, 1]])
-        rotationMatrix = np.dot(cameraRotationYMatrix, cameraRotationXMatrix)
-        cameraTransformMatrix = np.dot(rotationMatrix, cameraTranslationMatrix)
-        
+        # Combines all spaces together in one big matrix
         clipSpace = np.dot(np.dot(np.dot(self.perspectiveMatrix, cameraTransformMatrix), modelMatrix), vector)
         w = abs(clipSpace[3])
+
+        # This is to avoid a divide by zero error.
         if w == 0:
-            w = 1 # This is to avoid a divide by zero error.
+            w = 1
         finalCoordinate = [clipSpace[0] / w, clipSpace[1] / w, clipSpace[2]]
 
         return (finalCoordinate[0], finalCoordinate[1], finalCoordinate[2])
 
     # Returns a list of points for that shape
     # as well as a zIndex from -1 to 1 for how close the shape is to the camera
-    def renderPolygon(self, polygon, position, orientation):
+    def renderPolygon(self, polygon, modelMatrix, cameraTransformMatrix):
         result = []
         zAverage = 0
+        calculatedPoints = dict()
         for point in polygon.points:
-            newPoint = self.renderPoint(point, position, orientation)
-            #print(newPoint)
+            if point in calculatedPoints:
+                result.append(calculatedPoints[point][0])
+                result.append(calculatedPoints[point][1])
+                zAverage += calculatedPoints[point][2]
+                continue
+            newPoint = self.renderPoint(point, modelMatrix, cameraTransformMatrix)
             newPoint = self.convertImageSpaceToScreen(newPoint)
             result.append(newPoint[0])
             result.append(newPoint[1])
             zAverage += newPoint[2]
-            #if shape.color == 'green':
-                #print(newPoint[2])
+            calculatedPoints[point] = newPoint
         # Divide by the # of points, but result contains each x,y so divide by 2.
         zAverage = zAverage / (len(result) / 2) 
         return (result, zAverage)
     
-    # Moves the points to the proper position relative to the world view
-    # Deprecated
-    def moveToWorldView(self, point, position):
-        modelMatrix = np.array([[1, 0, 0, position[0]],
-                                [0, 1, 0, position[1]],
-                                [0, 0, 1, position[2]],
-                                [0, 0, 0, 1]])
-        point = np.transpose(np.array([point[0], point[1], point[2], 1]))
-        movedPoint = np.dot(modelMatrix, point)
-        return (movedPoint[0], movedPoint[1], movedPoint[2])
+    def createCameraTransformMatrix(self):
+        cameraTranslationMatrix = np.array([[1, 0, 0, self.cameraPosition[0]],
+                                            [0, 1, 0, self.cameraPosition[1]],
+                                            [0, 0, 1, self.cameraPosition[2]],
+                                            [0, 0, 0, 1]])
+        theta1 = (self.cameraOrientation[2]) * (math.pi / 180)
+        theta2 = (self.cameraOrientation[0]) * (math.pi / 180)
+        cameraRotationYMatrix = np.array([[ math.cos(theta1), 0, math.sin(theta1), 0],
+                                          [                0, 1,                0, 0],
+                                          [-math.sin(theta1), 0, math.cos(theta1), 0],
+                                          [                0, 0,                0, 1]])
+        
+        cameraRotationXMatrix = np.array([[1,                0,                 0, 0],
+                                          [0, math.cos(theta2), -math.sin(theta2), 0],
+                                          [0, math.sin(theta2),  math.cos(theta2), 0],
+                                          [0,                0,                 0, 1]])
+        rotationMatrix = np.dot(cameraRotationYMatrix, cameraRotationXMatrix)
+        return np.dot(rotationMatrix, cameraTranslationMatrix)
     
     def createModelMatrix(self, position, orientation):
         # The positions are negated to align with the axis of the camera.
         translationMatrix = np.array([[1, 0, 0, -position[0]],
-                                        [0, 1, 0, -position[1]],
-                                        [0, 0, 1, -position[2]],
-                                        [0, 0, 0, 1]])
+                                      [0, 1, 0, -position[1]],
+                                      [0, 0, 1, -position[2]],
+                                      [0, 0, 0,            1]])
         theta1 = orientation[2] * (math.pi / 180)
         theta2 = orientation[0] * (math.pi / 180)
         theta3 = orientation[1] * (math.pi / 180)
         rotationYMatrix = np.array([[ math.cos(theta1), 0, math.sin(theta1), 0],
-                                            [               0, 1,               0, 0],
-                                            [-math.sin(theta1), 0, math.cos(theta1), 0],
-                                            [               0, 0,               0, 1]])
+                                    [                0, 1,                0, 0],
+                                    [-math.sin(theta1), 0, math.cos(theta1), 0],
+                                    [                0, 0,                0, 1]])
         
-        rotationXMatrix = np.array([[1,               0,                0, 0],
-                                            [0, math.cos(theta2), -math.sin(theta2), 0],
-                                            [0, math.sin(theta2),  math.cos(theta2), 0],
-                                            [0,               0,                0, 1]])
-        rotationZMatrix = np.array([[math.cos(theta3),    -math.sin(theta3),  0, 0],
-                                            [math.sin(theta3), math.cos(theta3), 0, 0],
-                                            [0,             0,                  1, 0],
-                                            [0,               0,                0, 1]])
+        rotationXMatrix = np.array([[1,                0,                 0, 0],
+                                    [0, math.cos(theta2), -math.sin(theta2), 0],
+                                    [0, math.sin(theta2),  math.cos(theta2), 0],
+                                    [0,                0,                 0, 1]])
+        rotationZMatrix = np.array([[math.cos(theta3), -math.sin(theta3), 0, 0],
+                                    [math.sin(theta3),  math.cos(theta3), 0, 0],
+                                    [               0,                 0, 1, 0],
+                                    [               0,                 0, 0, 1]])
         rotationMatrix = np.dot(np.dot(rotationXMatrix, rotationYMatrix), rotationZMatrix)
-        return np.dot(rotationMatrix, translationMatrix)
+        return np.dot(translationMatrix, rotationMatrix)
     
     # Scales values to screen width and height and flips the y
     def convertImageSpaceToScreen(self, point):
@@ -202,58 +185,35 @@ class Graphics:
         screenY = int(point[1] * self.height) + self.height / 2
         return (screenX, screenY, point[2])
     
-    # Takes in two tuples/lists of length 3 (x, y, z)
+    # Takes in two tuples or lists of length 3 (x, y, z)
     def distance(self, p1, p2):
         return ((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2 + (p2[2] - p1[2])**2)**0.5
 
-    # This is O(nlogn) cause of the sorting at the end :(
+    # Mutates both shapes and shapeIndexes
+    def renderListOfShapes(self, shapes, shapeIndexes, listOfShapes):
+        cameraTransformMatrix = self.createCameraTransformMatrix()
+        for shape in listOfShapes:
+            # Check to make sure only objects only from the shape class are being considered
+            if type(shape) == Shape and shape.midpoint[2] <= self.cameraPosition[2]:
+                self.shapesToRemove.add(shape)
+                continue
+            dist = self.distance(self.cameraPosition, shape.midpoint)
+            allPoints = dict()
+            colors = dict()
+            indexes = []
+            modelMatrix = self.createModelMatrix(shape.position, shape.orientation)
+            for polygon in shape.polygons:
+                points, zIndex = self.renderPolygon(polygon, modelMatrix, cameraTransformMatrix)
+                allPoints[zIndex] = points
+                colors[zIndex] = polygon.color
+                indexes.append(zIndex)
+            shapes[dist] = (allPoints, colors, sorted(indexes, reverse=False))
+            shapeIndexes.append(dist)
+
     def render(self):
         shapes = dict()
         shapeIndexes = []
-        for shape in self.shapes:
-            shapeMidPoint = shape.calculateMidpoint(True)
-            if shapeMidPoint[2] <= self.cameraPosition[2]:
-                self.shapesToRemove.add(shape)
-                continue
-            dist = self.distance(self.cameraPosition, shapeMidPoint)
-            allPoints = dict()
-            colors = dict()
-            indexes = []
-            for polygon in shape.polygons:
-                points, zIndex = self.renderPolygon(polygon, shape.position, shape.orientation)
-                allPoints[zIndex] = points
-                colors[zIndex] = polygon.color
-                indexes.append(zIndex)
-            shapes[dist] = (allPoints, colors, sorted(indexes, reverse=False))
-            shapeIndexes.append(dist)
-        
-        # By breaking this apart, it will run faster than combining shapes and ships.
-        for ship in self.ships:
-            shapeMidPoint = ship.calculateMidpoint(True)
-            dist = self.distance(self.cameraPosition, shapeMidPoint)
-            allPoints = dict()
-            colors = dict()
-            indexes = []
-            for polygon in ship.polygons:
-                points, zIndex = self.renderPolygon(polygon, ship.position, ship.orientation)
-                allPoints[zIndex] = points
-                colors[zIndex] = polygon.color
-                indexes.append(zIndex)
-            shapes[dist] = (allPoints, colors, sorted(indexes, reverse=False))
-            shapeIndexes.append(dist)
-
-        for projectile in self.projectiles:
-            shapeMidPoint = projectile.calculateMidpoint(True)
-            dist = self.distance(self.cameraPosition, shapeMidPoint)
-            allPoints = dict()
-            colors = dict()
-            indexes = []
-            for polygon in projectile.polygons:
-                points, zIndex = self.renderPolygon(polygon, projectile.position, projectile.orientation)
-                allPoints[zIndex] = points
-                colors[zIndex] = polygon.color
-                indexes.append(zIndex)
-            shapes[dist] = (allPoints, colors, sorted(indexes, reverse=False))
-            shapeIndexes.append(dist)
-
+        self.renderListOfShapes(shapes, shapeIndexes, self.shapes)
+        self.renderListOfShapes(shapes, shapeIndexes, self.ships)
+        self.renderListOfShapes(shapes, shapeIndexes, self.projectiles)
         return (shapes, sorted(shapeIndexes, reverse=True))

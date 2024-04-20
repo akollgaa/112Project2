@@ -60,7 +60,9 @@ def losingScreen_onKeyPress(app, key):
 def playScreen_onScreenActivate(app):
     app.direction = []
     app.move = []
-    app.stepsPerSecond = 20
+    app.tilt = []
+    app.xBounds = 15
+    app.stepsPerSecond = 25
     app.fpsCounter = 0
     app.fps = 0
     app.startTime = time.time()
@@ -106,34 +108,19 @@ def addShapes(app):
              (top, 'orange')]
     floor = [(floor, 'green')]
     # We must have a ship
-    app.engine.addShip(createRectangularPrism(1, 2, 1), 'Adam', 2, 2)
-
+    app.engine.addShip(createRectangularPrism(1, 2, 1), 'Adam', 2, 4)
+    # Create a sequences of random heights of buildings
     for i in range(0, 20):
         height = random.randrange(20, 50)
         building1 = createRectangularPrism(10, 10, height)
         height2 = random.randrange(20, 50)
         building2 = createRectangularPrism(10, 10, height2)
-        app.engine.addShape(building1, [20, height / 2, 15 * i])
-        app.engine.addShape(building2, [-20, height2 / 2, 15 * i])
+        # Center of buildings are 20 units from middle
+        app.engine.addShape(building1, [app.xBounds + 5, height / 2, 15 * i])
+        app.engine.addShape(building2, [-(app.xBounds + 5), height2 / 2, 15 * i])
         app.endOfBuidlings += 1
-    #app.engine.addShape(createRectangularPrism(1, 1, 1), [0, 0, 0])
-    #app.engine.addShape(floor)
-    #app.engine.addShape(createRectangularPrism(1, 1, 1), [0, 0, 5])
-    return
-    for i in range(0, 10):
-        for j in range(0, 10):
-            floor = [(-20, 0, 20),
-                    (20, 0, 20),
-                    (20, 0, -20),
-                    (-20, 0, -20)]
-            color = 'black' if (i + j) % 2 == 0 else 'white'
-            floor = [(floor, color)]
-            app.engine.addShape(floor, [20 * i, 0, 20 * j])
-    #app.engine.addShape(cube, [0, 0, 2])
-    #app.engine.addShape(floor, [0, -2, 0])
 
 def playScreen_redrawAll(app):
-    #allPoints, colors, indexes = app.engine.render()
     shapes, shapeIndexes = app.engine.render()
     for i in shapeIndexes: # Loops through a sorted list of the z-indexes
         allPoints = shapes[i][0]
@@ -143,53 +130,32 @@ def playScreen_redrawAll(app):
             drawPolygon(*allPoints[index], fill=colors[index], border='black')
     drawCameraStatus(app)
 
-    drawMouseBox(app)
-
 def drawCameraStatus(app):
-    drawLabel(f'({app.engine.cameraPosition[0]:0.1f}, {app.engine.cameraPosition[1]:0.1f}, {app.engine.cameraPosition[2]:0.1f})', 50, 20)
-    drawLabel(f'({app.engine.cameraOrientation[0]:0.1f}, {app.engine.cameraOrientation[1]:0.1f}, {app.engine.cameraOrientation[2]:0.1f})', 50, 50)
+    drawLabel(f'({app.engine.cameraPosition[0]:0.1f},\
+{app.engine.cameraPosition[1]:0.1f},\
+{app.engine.cameraPosition[2]:0.1f})', 50, 20)
+    drawLabel(f'({app.engine.cameraOrientation[0]:0.1f},\
+{app.engine.cameraOrientation[1]:0.1f},\
+{app.engine.cameraOrientation[2]:0.1f})', 50, 50)
     drawLabel(f'({app.engine.fov:0.1f})', 50, 80)
     drawLabel(f'FPS: {app.fps}', 50, 110)
-    drawLabel(f'({app.engine.ships[app.player].position[0]:0.1f}, {app.engine.ships[app.player].position[1]:0.1f}, {app.engine.ships[app.player].position[2]:0.1f})', 50, 140)
-
-def drawMouseBox(app):
-    drawLine(app.width / 3, 0, app.width / 3, app.height, lineWidth=3)
-    drawLine(app.width * 2/3, 0, app.width * 2/3, app.height, lineWidth=3)
-    drawLine(0, app.height / 3, app.width, app.height / 3, lineWidth=3)
-    drawLine(0, app.height * 2/3, app.width, app.height * 2/3, lineWidth=3)
+    drawLabel(f'({app.engine.ships[app.player].position[0]:0.1f},\
+{app.engine.ships[app.player].position[1]:0.1f},\
+{app.engine.ships[app.player].position[2]:0.1f})', 50, 140)
 
 def playScreen_onKeyPress(app, key):
-    if key == 'r':
-        app.engine.resetCamera()
-
     if key == 'w':
-        #app.engine.moveCameraPosition(0, 0, 1)
         app.move.append('w')
+        app.tilt.append('w')
     elif key == 's':
         app.move.append('s')
-        #app.engine.moveCameraPosition(0, 0, -1)
+        app.tilt.append('s')
     elif key == 'd':
         app.move.append('d')
-        #app.engine.moveCameraPosition(1, 0, 0)
+        app.tilt.append('d')
     elif key == 'a':
         app.move.append('a')
-        #app.engine.moveCameraPosition(-1, 0, 0)
-    elif key == 'up':
-        app.engine.moveCameraPosition(0, 1, 0)
-    elif key == 'down':
-        app.engine.moveCameraPosition(0, -1, 0)
-    elif key == 'left':
-        app.engine.moveCameraOrientation(0, 0, 5) # 5 degrees at a time
-    elif key == 'right':
-        app.engine.moveCameraOrientation(0, 0, -5) # 5 degrees at a time
-    elif key == 'z':
-        app.engine.moveCameraOrientation(-5, 0, 0)
-    elif key == 'x':
-        app.engine.moveCameraOrientation(5, 0, 0)
-    elif key == 't':
-        app.engine.moveFOV(0.1)
-    elif key == 'y':
-        app.engine.moveFOV(-0.1)
+        app.tilt.append('a')
     elif key == 'space':
         laser = createRectangularPrism(0.5, 2, 0.5)
         app.engine.addProjectile(laser, 8, 10, 2, app.engine.ships[app.player].position)
@@ -197,74 +163,68 @@ def playScreen_onKeyPress(app, key):
         setActiveScreen('menuScreen')
 
 def playScreen_onKeyRelease(app, key):
-    if key == 'w' and 'w' in app.move:
+    if key == 'w' and 'w' in app.move and 'w' in app.tilt:
         app.move.remove('w')
-    elif key == 's' and 's' in app.move:
+        app.tilt.remove('w')
+    elif key == 's' and 's' in app.move and 's' in app.tilt:
         app.move.remove('s')
-    elif key == 'd' and 'd' in app.move:
+        app.tilt.remove('s')
+    elif key == 'd' and 'd' in app.move and 'd' in app.tilt:
         app.move.remove('d')
-    elif key == 'a' and 'a' in app.move:
+        app.tilt.remove('d')
+    elif key == 'a' and 'a' in app.move and 'a' in app.tilt:
         app.move.remove('a')
+        app.tilt.remove('a')
 
 def playScreen_onMouseMove(app, mouseX, mouseY):
+    # Controlling camera orientation based on mouse position
     y = ((mouseX / app.width)) * 180 - 90
     r = app.engine.cameraOrientation[1]
     x = (1 - (mouseY / app.height)) * 180 - 90
     app.engine.cameraOrientation = [x, r, y]
 
-    # Below is an different way of controlling the camera orientation
-
-    # if mouseX < app.width / 3:
-    #     app.direction.append('left')
-    # elif 'left' in app.direction:
-    #     app.direction.remove('left')
-
-    # if mouseX > app.width * 2/3:
-    #     app.direction.append('right')
-    # elif 'right' in app.direction:
-    #     app.direction.remove('right')
-
-    # if mouseY < app.height / 3:
-    #     app.direction.append('up')
-    # elif 'up' in app.direction:
-    #     app.direction.remove('up')
-
-    # if mouseY > app.height * 2/3:
-    #     app.direction.append('down')
-    # elif 'down' in app.direction:
-    #     app.direction.remove('down')
-
 def playScreen_onStep(app):
 
     #app.engine.ships[app.player].moveShip(0, 0, app.engine.ships[app.player].speed)
     app.engine.moveCameraPosition(0, 0, app.engine.ships[app.player].speed)
-    # This is basically not used; however I'm keeping it for debugging purposes
-    rate = 0.1
-    for direction in app.direction:
-        if direction == 'left': app.engine.moveCameraOrientation(0, 0, rate)
-        elif direction == 'right': app.engine.moveCameraOrientation(0, 0, -rate)
-        elif direction == 'up': app.engine.moveCameraOrientation(rate, 0, 0)
-        elif direction == 'down': app.engine.moveCameraOrientation(-rate, 0, 0)
     
-    rate = 0.1
+    rate = 1
     for move in app.move:
-        if move == 'w': app.engine.moveCameraPosition(0, 1, 0)
-        elif move == 's': app.engine.moveCameraPosition(0, -1, 0)
-        elif move == 'd': app.engine.moveCameraPosition(-1, 0, 0)
-        elif move == 'a': app.engine.moveCameraPosition(1, 0, 0)
+        if move == 'w': app.engine.moveCameraPosition(0, rate, 0)
+        elif move == 's': app.engine.moveCameraPosition(0, -rate, 0)
+        elif move == 'd': app.engine.moveCameraPosition(-rate, 0, 0)
+        elif move == 'a': app.engine.moveCameraPosition(rate, 0, 0)
 
+    # We check tilt seperately than move in order to account for max tilts
+    rate = app.engine.ships[app.player].jerk
+    for tilt in app.tilt:
+        if tilt == 'w' and app.engine.ships[app.player].orientation[0] > -20: 
+            app.engine.ships[app.player].tiltShip(-rate, 0, 0)
+        elif tilt == 's' and app.engine.ships[app.player].orientation[0] < 20: 
+            app.engine.ships[app.player].tiltShip(rate, 0, 0)
+        elif tilt == 'd' and app.engine.ships[app.player].orientation[2] > -20: 
+            app.engine.ships[app.player].tiltShip(0, 0, -rate)
+        elif tilt == 'a' and app.engine.ships[app.player].orientation[2] < 20: 
+            app.engine.ships[app.player].tiltShip(0, 0, rate)
+
+    if 'w' not in app.tilt and app.engine.ships[app.player].orientation[0] < 0:
+        app.engine.ships[app.player].tiltShip(rate, 0, 0)
+    elif 's' not in app.tilt and app.engine.ships[app.player].orientation[0] > 0:
+        app.engine.ships[app.player].tiltShip(-rate, 0, 0)
+    if 'd' not in app.tilt and app.engine.ships[app.player].orientation[2] < 0:
+        app.engine.ships[app.player].tiltShip(0, 0, rate)
+    elif 'a' not in app.tilt and app.engine.ships[app.player].orientation[2] > 0:
+        app.engine.ships[app.player].tiltShip(0, 0, -rate)
+
+    # Check the FPS counter
     app.fpsCounter += 1
     if (time.time() - app.startTime) >= 1:
         app.fps = app.fpsCounter
         app.fpsCounter = 0
         app.startTime = time.time()
 
-    # for shape in app.engine.shapes:
-    #     if isinstance(shape, Ship):
-    #         shape.moveShip(0, 0, shape.speed / 10)
-    #         #print(shape.position)
+    # Most of what is below is updating shape data 
 
-    #app.engine.resetCameraToShip()
     app.engine.resetShipToCamera()
 
     removed = app.engine.removeShapes()
@@ -273,9 +233,9 @@ def playScreen_onStep(app):
         building1 = createRectangularPrism(10, 10, height)
         height2 = random.randrange(20, 50)
         building2 = createRectangularPrism(10, 10, height2)
+        app.engine.addShape(building1, [app.xBounds + 5, height / 2, 15 * app.endOfBuidlings])
+        app.engine.addShape(building2, [-(app.xBounds + 5), height2 / 2, 15 * app.endOfBuidlings])
         app.endOfBuidlings += 1
-        app.engine.addShape(building1, [20, height / 2, 15 * app.endOfBuidlings])
-        app.engine.addShape(building2, [-20, height2 / 2, 15 * app.endOfBuidlings])
 
     for projectile in app.engine.projectiles:
         projectile.move()
@@ -284,11 +244,9 @@ def playScreen_onStep(app):
 
     checkPlayerBounds(app)
 
-    #app.engine.shapes[0].moveOrientation(1, 1, 1)
-
 def checkPlayerBounds(app):
     player = app.engine.ships[app.player]
-    if (player.position[0] > 15 or player.position[0] < -15 or player.position[1] < 0 or player.position[1] > 80):
+    if (player.position[0] > app.xBounds or player.position[0] < -app.xBounds or player.position[1] < 0 or player.position[1] > 80):
         setActiveScreen('losingScreen')
 
 def main():

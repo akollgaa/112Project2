@@ -1,15 +1,24 @@
+def stuff(thing):
+    thing[1] = 3
+
+thing = dict()
+stuff(thing)
+print(thing)
+
+
+
 # You can use this script to explore how your grade will
 # change based on your midterm2, project2, and final exam scores.
 
 # fill these in from your gradebook on Canvas:
-hwAvg = 102   # hw avg in Canvas already includes two half-weighted
-quizAvg = 96.5 # quiz avg in Canvas already drops + half-weights
-midterm1Score = 100.8
+hwAvg = 104.1   # hw avg in Canvas already includes two half-weighted
+quizAvg = 95.8 # quiz avg in Canvas already drops + half-weights
+midterm1Score = 96.1
 project1Score = 93
 
 # fill these in based on your best guesses:
-midterm2Score = 50
-project2Score = 70
+midterm2Score = 86
+project2Score = 5
 finalExamScore = None  # None means "not taking"
 
 # 1. find projectAvg:
