@@ -3,6 +3,10 @@ import numpy as np
 import math
 from Model import Ship
 from Model import Projectile
+from Model import Ground
+from Model import Enemy
+from Model import Obstacle
+from Model import PowerUp
 
 class Graphics:
 
@@ -15,7 +19,13 @@ class Graphics:
         self.shapes = []
         self.ships = []
         self.projectiles = []
+        self.ground = []
+        self.enemies = []
+        self.obstacles = []
+        self.powerups = []
         self.shapesToRemove = set()
+        self.projectilesToRemove = set()
+        self.powerupsToRemove = set()
 
         # We only need to calculate the perspectiveMatrix once and then reference later
         # Aspect Ratio
@@ -35,27 +45,60 @@ class Graphics:
     def addProjectile(self, shape, speed, power, direction, position=(0, 0, 0), orientation=(0, 0, 0)):
         self.projectiles.append(Projectile(shape, speed, power, direction, position, orientation))
 
-    def addShip(self, shape, captain, speed, jerk):
-        self.ships.append(Ship(shape, captain, speed, jerk))
+    def addShip(self, shape, captain, speed, jerk, health):
+        self.ships.append(Ship(shape, captain, speed, jerk, health))
 
-    def addShape(self, shape, position=[0, 0, 0], orientation=[0, 0, 0]):
+    def addShape(self, shape, position=(0, 0, 0), orientation=(0, 0, 0)):
         self.shapes.append(Shape(shape, position, orientation))
 
+    def addGround(self, shape):
+        self.ground.append(Ground(shape))
+
+    def addEnemy(self, shape, position, standPosition, health, shootRate):
+        self.enemies.append(Enemy(shape, position, standPosition, health, shootRate))
+    
+    def addObstacle(self, shape, position, length):
+        self.obstacles.append(Obstacle(shape, position, length))
+
+    def addPowerUp(self, shape, position, healthValue):
+        self.powerups.append(PowerUp(shape, position, healthValue))
+
+    # Removes both shapes and obstacles 
     def removeShapes(self):
         removed = False
         for shape in self.shapesToRemove:
-            self.shapes.remove(shape)
+            if type(shape) == Shape:
+                self.shapes.remove(shape)
+            elif type(shape) == Obstacle:
+                self.obstacles.remove(shape)
             removed = True
         self.shapesToRemove = set()
         return removed
     
     def removeProjectile(self):
-        projectilesToRemove = []
         for projectile in self.projectiles:
-            if projectile.distanceTraveled > 100:
-                projectilesToRemove.append(projectile)
-        for projectile in projectilesToRemove:
+            if (projectile.distanceTraveled > 200 or 
+                projectile.position[2] < self.cameraPosition[2]):
+                self.projectilesToRemove.add(projectile)
+        for projectile in self.projectilesToRemove:
             self.projectiles.remove(projectile)
+        self.projectilesToRemove = set()
+
+    def removePowerUps(self):
+        for powerup in self.powerups:
+            if powerup.position[2] < self.cameraPosition[2]:
+                self.powerupsToRemove.add(powerup)
+        for powerup in self.powerupsToRemove:
+            self.powerups.remove(powerup)
+        self.powerupsToRemove = set()
+
+    def removeEnemies(self):
+        enemiesToRemove = []
+        for enemy in self.enemies:
+            if enemy.health <= 0 or enemy.position[2] < self.cameraPosition[2]:
+                enemiesToRemove.append(enemy)
+        for enemy in enemiesToRemove:
+            self.enemies.remove(enemy)
 
     def resetCamera(self):
         self.cameraPosition = [0, 0, 0] # x, y, z
@@ -190,13 +233,21 @@ class Graphics:
         return ((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2 + (p2[2] - p1[2])**2)**0.5
 
     # Mutates both shapes and shapeIndexes
-    def renderListOfShapes(self, shapes, shapeIndexes, listOfShapes):
+    def renderListOfShapes(self, shapes, shapeIndexes, listOfShapes, isRemoving=True):
         cameraTransformMatrix = self.createCameraTransformMatrix()
         for shape in listOfShapes:
             # Check to make sure only objects only from the shape class are being considered
-            if type(shape) == Shape and shape.midpoint[2] <= self.cameraPosition[2]:
+            if ((type(shape) == Shape or type(shape) == Obstacle) and 
+                shape.midpoint[2] <= self.cameraPosition[2] and isRemoving):
                 self.shapesToRemove.add(shape)
                 continue
+            color = None
+            if (type(shape) == Ship or type(shape) == Enemy) and shape.hit >= 1:
+                color = 'white'
+                shape.hit += 1
+            elif (type(shape) == Ship or type(shape) == Enemy) and shape.heal >= 1:
+                color = 'brown'
+                shape.heal += 1
             dist = self.distance(self.cameraPosition, shape.midpoint)
             allPoints = dict()
             colors = dict()
@@ -205,7 +256,7 @@ class Graphics:
             for polygon in shape.polygons:
                 points, zIndex = self.renderPolygon(polygon, modelMatrix, cameraTransformMatrix)
                 allPoints[zIndex] = points
-                colors[zIndex] = polygon.color
+                colors[zIndex] = color if color != None else polygon.color
                 indexes.append(zIndex)
             shapes[dist] = (allPoints, colors, sorted(indexes, reverse=False))
             shapeIndexes.append(dist)
@@ -216,4 +267,13 @@ class Graphics:
         self.renderListOfShapes(shapes, shapeIndexes, self.shapes)
         self.renderListOfShapes(shapes, shapeIndexes, self.ships)
         self.renderListOfShapes(shapes, shapeIndexes, self.projectiles)
-        return (shapes, sorted(shapeIndexes, reverse=True))
+        self.renderListOfShapes(shapes, shapeIndexes, self.enemies)
+        self.renderListOfShapes(shapes, shapeIndexes, self.obstacles)
+        for powerup in self.powerups:
+            # We do not want to remove the powerup shapes because they
+            # are not contained within the shapes list
+            self.renderListOfShapes(shapes, shapeIndexes, powerup.orbs, False)
+        ground = dict()
+        groundIndexes = []
+        self.renderListOfShapes(ground, groundIndexes, self.ground)
+        return (shapes, sorted(shapeIndexes, reverse=True), ground, groundIndexes)

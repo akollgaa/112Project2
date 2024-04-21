@@ -10,6 +10,7 @@ class Shape:
         for points, color in shape:
             self.polygons.append(Polygon(points, color))
         self.midpoint = self.calculateMidpoint()
+        self.radius = self.calculateRadius()
 
     def __repr__(self):
         return f'Shape containing {len(self.polygons)} polygons at ({self.position})'
@@ -50,6 +51,22 @@ class Shape:
         if addPosition:
             return (result[0] + self.position[0], result[1] + self.position[1], result[2] + self.position[2])
         return result
+    
+    # This calculates the 'radius' for any shape
+    # Simply an average of 
+    def calculateRadius(self):
+        x = []
+        y = []
+        z = []
+        for polygon in self.polygons:
+            midpoint = polygon.calculateMidpoint()
+            x.append(midpoint[0])
+            y.append(midpoint[1])
+            z.append(midpoint[2])
+        xDiff = max(x) - min(x)
+        yDiff = max(y) - min(y)
+        zDiff = max(z) - min(z)
+        return max(xDiff, yDiff, zDiff) / 2
 
 class Polygon:
     # We naturally want to flip the axis because the camera will render everything upsidedown

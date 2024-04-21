@@ -61,54 +61,27 @@ def playScreen_onScreenActivate(app):
     app.direction = []
     app.move = []
     app.tilt = []
-    app.xBounds = 15
+    app.xBounds = 40
+    app.buildingDistance = 35
     app.stepsPerSecond = 25
     app.fpsCounter = 0
     app.fps = 0
     app.startTime = time.time()
     app.engine = Graphics(app.width, app.height)
     app.player = 0 # Index for the ship array
-    app.endOfBuidlings = 0
+    app.endOfBuildings = 0
     addShapes(app)
 
 def addShapes(app):
-    front = [(-1, 1, 0),
-            (1, 1, 0),
-            (1, -1, 0),
-            (-1, -1, 0)]
-    back = [(-1, 1, 2),
-            (1, 1, 2),
-            (1, -1, 2),
-            (-1, -1, 2)]
-    left = [(-1, 1, 0),
-            (-1, 1, 2),
-            (-1, -1, 2),
-            (-1, -1, 0)]
-    right = [(1, 1, 0),
-            (1, 1, 2),
-            (1, -1, 2),
-            (1, -1, 0)]
-    top = [(-1, 1, 0),
-            (-1, 1, 2),
-            (1, 1, 2),
-            (1, 1, 0)]
-    bottom = [(-1, -1, 0),
-            (-1, -1, 2),
-            (1, -1, 2),
-            (1, -1, 0)]
-    floor = [(-1000, 0, 1000),
-             (1000, 0, 1000),
-             (1000, 0, -1000),
-             (-1000, 0, -1000)]
-    cube = [(front, 'red'),
-             (back, 'yellow'),
-             (left, 'green'),
-             (right, 'blue'),
-             (bottom, 'purple'),
-             (top, 'orange')]
-    floor = [(floor, 'green')]
     # We must have a ship
-    app.engine.addShip(createRectangularPrism(1, 2, 1), 'Adam', 2, 4)
+    app.engine.addShip(createRectangularPrism(1, 2, 1), 'Adam', 2, 4, 30)
+    # We must have a ground
+    floor = [(-(app.xBounds + 25), 0, 500),
+             (-(app.xBounds + 25), 0, -500),
+             ((app.xBounds + 25), 0, -500),
+             ((app.xBounds + 25), 0, 500)]
+    ground = [(floor, 'green')]
+    app.engine.addGround(ground)
     # Create a sequences of random heights of buildings
     for i in range(0, 20):
         height = random.randrange(20, 50)
@@ -116,18 +89,50 @@ def addShapes(app):
         height2 = random.randrange(20, 50)
         building2 = createRectangularPrism(10, 10, height2)
         # Center of buildings are 20 units from middle
-        app.engine.addShape(building1, [app.xBounds + 5, height / 2, 15 * i])
-        app.engine.addShape(building2, [-(app.xBounds + 5), height2 / 2, 15 * i])
-        app.endOfBuidlings += 1
+        app.engine.addShape(building1, [app.xBounds + 5, height / 2, app.buildingDistance * i])
+        app.engine.addShape(building2, [-(app.xBounds + 5), height2 / 2, app.buildingDistance * i])
+        app.endOfBuildings += 1
 
 def playScreen_redrawAll(app):
-    shapes, shapeIndexes = app.engine.render()
-    for i in shapeIndexes: # Loops through a sorted list of the z-indexes
+    shapes, shapeIndexes, ground, groundIndexes = app.engine.render()
+    # First we must draw the ground
+    allPoints = ground[groundIndexes[0]][0]
+    colors = ground[groundIndexes[0]][1]
+    indexes = ground[groundIndexes[0]][2]
+    for index in indexes:
+        # Based on the y position of the rendered ground we can create a new ground
+        # that looks better because it is drawn in all directions
+        y1 = allPoints[index][3]
+        x1 = allPoints[index][2]
+        y2 = allPoints[index][5]
+        x2 = allPoints[index][4]
+        m = (y2 - y1) / (x2 - x1)
+        b = y1 - (m * x1)
+        y1 = b
+        y2 = m * app.width + b
+        drawPolygon(0, y1, app.width, y2, app.width, app.height, 0, app.height, fill=colors[index], border='black')
+    # Loops through a sorted list of the z-indexes
+    for i in shapeIndexes:
         allPoints = shapes[i][0]
         colors = shapes[i][1]
         indexes = shapes[i][2]
         for index in indexes:
             drawPolygon(*allPoints[index], fill=colors[index], border='black')
+
+    # Draw player health
+    drawRect(20, app.height - 75, 75, 25, fill='white', border='black')
+    width = 71 * (app.engine.ships[app.player].health / 30)
+    if width <= 0: # We don't want a negative health bar
+        width = 1
+    drawRect(22, app.height - 73, width, 21, fill='red')
+
+    # Draw player boost
+    drawRect(100, app.height - 75, 75, 25, fill='white', border='black')
+    width = 71 * (app.engine.ships[app.player].boostCooldown / 40)
+    if width <= 0: # We don't want a negative boost bar
+        width = 1
+    drawRect(102, app.height - 73, width, 21, fill='blue')
+
     drawCameraStatus(app)
 
 def drawCameraStatus(app):
@@ -158,9 +163,12 @@ def playScreen_onKeyPress(app, key):
         app.tilt.append('a')
     elif key == 'space':
         laser = createRectangularPrism(0.5, 2, 0.5)
+        # Make sure the laser is not inside in the ship
         app.engine.addProjectile(laser, 8, 10, 2, app.engine.ships[app.player].position)
     elif key == 'm':
         setActiveScreen('menuScreen')
+    elif key == 'f':
+        app.engine.ships[app.player].startBoost()
 
 def playScreen_onKeyRelease(app, key):
     if key == 'w' and 'w' in app.move and 'w' in app.tilt:
@@ -183,11 +191,17 @@ def playScreen_onMouseMove(app, mouseX, mouseY):
     x = (1 - (mouseY / app.height)) * 180 - 90
     app.engine.cameraOrientation = [x, r, y]
 
+def playScreen_onMousePress(app, mx, my):
+    app.engine.ships[app.player].startBarrelRoll()
+
 def playScreen_onStep(app):
 
     #app.engine.ships[app.player].moveShip(0, 0, app.engine.ships[app.player].speed)
-    app.engine.moveCameraPosition(0, 0, app.engine.ships[app.player].speed)
     
+    app.engine.moveCameraPosition(0, 0, app.engine.ships[app.player].speed)
+    # There is only one ground so we can index at 0
+    app.engine.ground[0].updateGround(app.engine.ships[app.player].speed)
+
     rate = 1
     for move in app.move:
         if move == 'w': app.engine.moveCameraPosition(0, rate, 0)
@@ -233,16 +247,112 @@ def playScreen_onStep(app):
         building1 = createRectangularPrism(10, 10, height)
         height2 = random.randrange(20, 50)
         building2 = createRectangularPrism(10, 10, height2)
-        app.engine.addShape(building1, [app.xBounds + 5, height / 2, 15 * app.endOfBuidlings])
-        app.engine.addShape(building2, [-(app.xBounds + 5), height2 / 2, 15 * app.endOfBuidlings])
-        app.endOfBuidlings += 1
+        app.engine.addShape(building1, (app.xBounds + 5, height / 2, app.buildingDistance * app.endOfBuildings))
+        app.engine.addShape(building2, (-(app.xBounds + 5), height2 / 2, app.buildingDistance * app.endOfBuildings))
+        app.endOfBuildings += 1
 
     for projectile in app.engine.projectiles:
         projectile.move()
 
+    for enemy in app.engine.enemies:
+        if enemy.shoot():
+            laser = createRectangularPrism(0.5, 2, 0.5)
+            pos = (enemy.position[0], enemy.position[1], enemy.position[2] - 5)
+            app.engine.addProjectile(laser, -6, 5, 2, pos)
+        for projectile in app.engine.projectiles:
+            if shapeCollision(enemy, projectile):
+                enemy.health -= projectile.power
+                app.engine.projectilesToRemove.add(projectile)
+                enemy.hit += 1
+        if enemy.hit >= 5:
+            enemy.hit = 0
+        enemy.moveToStandPosition()
+
+    for projectile in app.engine.projectiles:
+        if shapeCollision(app.engine.ships[app.player], projectile):
+            app.engine.ships[app.player].health -= projectile.power
+            app.engine.projectilesToRemove.add(projectile)
+            app.engine.ships[app.player].hit += 1
+
+    for obstacle in app.engine.obstacles:
+        if obstacleCollision(app.engine.ships[app.player], obstacle):
+            app.engine.ships[app.player].health -= obstacle.power
+            app.engine.ships[app.player].hit += 1
+
+    for powerup in app.engine.powerups:
+        if powerupCollision(app.engine.ships[app.player], powerup):
+            app.engine.ships[app.player].health += powerup.healthValue
+            if app.engine.ships[app.player].health >= 30: # 30 is the max health
+                app.engine.ships[app.player].health = 30
+            app.engine.ships[app.player].heal += 1
+            app.engine.powerupsToRemove.add(powerup)
+        powerup.rotateOrbs()
+
     app.engine.removeProjectile()
+    app.engine.removeEnemies()
+    app.engine.removePowerUps()
+
+    if app.engine.ships[app.player].hit >= 3:
+        app.engine.ships[app.player].hit = 0
+    if app.engine.ships[app.player].heal >= 3:
+        app.engine.ships[app.player].heal = 0
 
     checkPlayerBounds(app)
+    app.engine.ships[app.player].performBarrelRoll()
+    app.engine.ships[app.player].performBoost()
+
+    # Randomly create an enemy
+    if random.randrange(0, 40) < 1:
+        enemy = createRectangularPrism(4, 4, 4)
+        x = random.randrange(-15, 15)
+        y = random.randrange(10, 25)
+        shipZ = app.engine.ships[app.player].position[2]
+        shipY = app.engine.ships[app.player].position[1]
+        app.engine.addEnemy(enemy, (0, shipY + 30, shipZ + 5), (x, y, shipZ + 150), 20, 5)
+
+    # Randomly create an obstacle
+    if random.randrange(0, 40) < 1:
+        obstacle = createRectangularPrism(5, 5, 40)
+        x = random.randrange(-20, 20)
+        app.engine.addObstacle(obstacle, (x, 20, app.buildingDistance * app.endOfBuildings), 5)
+
+    # Randomly create a powerup
+    if random.randrange(0, 40) < 1:
+        orb = createRectangularPrism(1, 1, 1)
+        x = random.randrange(-20, 20)
+        y = random.randrange(5, 60)
+        shipZ = app.engine.ships[app.player].position[2]
+        app.engine.addPowerUp(orb, (x, y, shipZ + 100), 10)
+
+def distance(p1, p2):
+    return ((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2 + (p2[2] - p1[2])**2)**0.5
+
+# shape2 must be a projectile
+def shapeCollision(shape1, shape2):
+    if ((type(shape1) == Ship and shape2.speed > 0) or 
+        type(shape1) == Enemy and shape2.speed < 0):
+        return False
+    isProjectileInfront = shape2.midpoint[2] + shape2.speed >= shape1.midpoint[2]
+    if shape2.speed < 0:
+        isProjectileInfront = shape2.midpoint[2] + shape2.speed <= shape1.midpoint[2]
+    if (shape1.midpoint[0] - shape1.radius < shape2.midpoint[0] < shape1.midpoint[0] + shape1.radius and 
+        shape1.midpoint[1] - shape1.radius < shape2.midpoint[1] < shape1.midpoint[1] + shape1.radius and 
+        isProjectileInfront):
+        return True
+
+# shape2 must be a obstacle
+def obstacleCollision(shape1, shape2):
+    if (shape2.midpoint[0] - shape2.radius < shape1.midpoint[0] < shape2.midpoint[0] + shape2.radius and
+        shape1.midpoint[2] >= shape2.midpoint[2] - shape2.radius and
+        shape1.midpoint[1] < shape2.height):
+        return True
+    
+# shape2 must be a powerup
+def powerupCollision(shape1, shape2):
+    if (shape2.midpoint[0] - shape2.radius < shape1.midpoint[0] < shape2.midpoint[0] + shape2.radius and
+        shape2.midpoint[1] - shape2.radius < shape1.midpoint[1] < shape2.midpoint[1] + shape2.radius and
+        shape2.midpoint[2] < shape1.midpoint[2]):
+        return True
 
 def checkPlayerBounds(app):
     player = app.engine.ships[app.player]
