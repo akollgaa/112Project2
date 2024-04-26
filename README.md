@@ -1,8 +1,8 @@
 112 Project Option 3 4/26/24
 By: Adam Kollgaard
 
----------------
 File structure:
+--------------
 main.py - This is the main file! Run the game from here. Make sure cmu_graphics is
 in the same directory.
 
@@ -20,7 +20,6 @@ buildings and other stuff.
 test.py - Random stuff to test python things
 
 Engine.py - An old version of the graphics engine. It is not used; deprecated :(
----------------
 
 For my project, I created a game that is essientally very similiar to the game starfox.
 It is a endless version of the game that is more of a snippet to the actual game.
