@@ -270,7 +270,7 @@ class Graphics:
         shapes = dict()
         shapeIndexes = []
         self.renderListOfShapes(shapes, shapeIndexes, self.shapes)
-        if pov: 
+        if pov: # only render the player ship if in third person mode
             self.renderListOfShapes(shapes, shapeIndexes, self.ships)
         self.renderListOfShapes(shapes, shapeIndexes, self.projectiles)
         self.renderListOfShapes(shapes, shapeIndexes, self.enemies)
