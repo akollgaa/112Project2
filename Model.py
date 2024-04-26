@@ -38,6 +38,198 @@ def createRectangularPrism(width, length, height):
              (top, 'orange')]
     return prism
 
+def createBuilding(width, length, height):
+    x = width / 2
+    y = height / 2
+    z = length / 2
+    front = [(-x, y, z),
+            (x, y, z),
+            (x, -y, z),
+            (-x, -y, z)]
+    back = [(-x, y, -z),
+            (x, y, -z),
+            (x, -y, -z),
+            (-x, -y, -z)]
+    left = [(-x, y, z),
+            (-x, y, -z),
+            (-x, -y, -z),
+            (-x, -y, z)]
+    right = [(x, y, z),
+            (x, y, -z),
+            (x, -y, -z),
+            (x, -y, z)]
+    top = [(-x, y, z),
+            (-x, y, -z),
+            (x, y, -z),
+            (x, y, z)]
+    bottom = [(-x, -y, z),
+            (-x, -y, -z),
+            (x, -y, -z),
+            (x, -y, z)]
+    building = [(front, 'darkgray'),
+             (back, 'darkgray'),
+             (left, 'darkgray'),
+             (right, 'darkgray'),
+             (bottom, 'darkgray'),
+             (top, 'darkgray')]
+    return building
+
+def createObstacle(width, length, height):
+    x = width / 2
+    y = height / 2
+    z = length / 2
+    front = [(-x, y, z),
+            (x, y, z),
+            (x, -y, z),
+            (-x, -y, z)]
+    back = [(-x, y, -z),
+            (x, y, -z),
+            (x, -y, -z),
+            (-x, -y, -z)]
+    left = [(-x, y, z),
+            (-x, y, -z),
+            (-x, -y, -z),
+            (-x, -y, z)]
+    right = [(x, y, z),
+            (x, y, -z),
+            (x, -y, -z),
+            (x, -y, z)]
+    top = [(-x, y, z),
+            (-x, y, -z),
+            (x, y, -z),
+            (x, y, z)]
+    bottom = [(-x, -y, z),
+            (-x, -y, -z),
+            (x, -y, -z),
+            (x, -y, z)]
+    obstacle = [(front, 'lightgray'),
+             (back, 'lightgray'),
+             (left, 'lightgray'),
+             (right, 'lightgray'),
+             (bottom, 'lightgray'),
+             (top, 'lightgray')]
+    return obstacle
+
+def shipModel(size, flip=False):
+    zFlip = -1 if flip else 1
+
+    top = [(-size, size, size),
+           (-size, size, -size),
+           (size, size, -size),
+           (size, size, size)]
+    bottom = [(-size, -size, size),
+              (-size, -size, -size),
+              (size, -size, -size),
+              (size, -size, size)]
+    left = [(-size, size, size),
+            (-size, size, -size),
+            (-size, -size, -size),
+            (-size, -size, size)]
+    right = [(size, size, size),
+             (size, size, -size),
+             (size, -size, -size),
+             (size, -size, size)]
+    back = [(-size, size, zFlip * size),
+            (-size, -size, zFlip * size),
+            (size, -size, zFlip * size),
+            (size, size, zFlip * size)]
+    frontTop = [(-size, size, -zFlip * size),
+                (size, size, -zFlip * size),
+                (size, 0, -zFlip * size * 3),
+                (-size, 0, -zFlip * size * 3)]
+    frontBottom = [(-size, -size, -zFlip * size),
+                (size, -size, -zFlip * size),
+                (size, 0, -zFlip * size * 3),
+                (-size, 0, -zFlip * size * 3)]
+    frontLeft = [(-size, size, -zFlip * size),
+                 (-size, -size, -zFlip * size),
+                 (-size, 0, -zFlip * size * 3)]
+    frontRight = [(size, size, -zFlip * size),
+                  (size, -size, -zFlip * size),
+                  (size, 0, -zFlip * size * 3)]
+    leftWingTop = [(-size, 0, -zFlip * size),
+                   (-size, 0, zFlip * size),
+                   (-(size * 4), -(size * 0.25), zFlip * (size * 2)),
+                   (-(size * 4), -(size * 0.25), zFlip * size)]
+    leftWingBottom = [(-size, -(size*0.25), -zFlip * size),
+                      (-size, -(size*0.25), zFlip * size),
+                      (-(size * 4), -(size * 0.25), zFlip * (size * 2)),
+                      (-(size * 4), -(size * 0.25), zFlip * size)]
+    leftWingBack = [(-size, 0, zFlip * size),
+                    (-size, -(size*0.25), zFlip * size),
+                    (-(size * 4), -(size * 0.25), zFlip * (size * 2))]
+    leftWingFront = [(-size, 0, -zFlip * size),
+                     (-size, -(size*0.25), -zFlip * size),
+                     (-(size * 4), -(size * 0.25), zFlip * size)]
+    rightWingTop = [(size, 0, -zFlip * size),
+                   (size, 0, size),
+                   ((size * 4), -(size * 0.25), zFlip * (size * 2)),
+                   ((size * 4), -(size * 0.25), zFlip * size)]
+    rightWingBottom = [(size, -(size*0.25), -zFlip * size),
+                      (size, -(size*0.25), zFlip * size),
+                      ((size * 4), -(size * 0.25), zFlip * (size * 2)),
+                      ((size * 4), -(size * 0.25), zFlip * size)]
+    rightWingBack = [(size, 0, zFlip * size),
+                    (size, -(size*0.25), zFlip * size),
+                    ((size * 4), -(size * 0.25), zFlip * (size * 2))]
+    rightWingFront = [(size, 0, -zFlip * size),
+                     (size, -(size*0.25), -zFlip * size),
+                     ((size * 4), -(size * 0.25), zFlip * size)]
+    shipPrism = [(top, 'gray'),
+                 (bottom, 'gray'),
+                 (back, 'gray'),
+                 (left, 'gray'),
+                 (right, 'gray'),
+                 (frontTop, 'black'),
+                 (frontRight, 'gray'),
+                 (frontLeft, 'gray'),
+                 (frontBottom, 'gray'),
+                 (leftWingTop, 'blue'),
+                 (leftWingBottom, 'blue'),
+                 (leftWingBack, 'red'),
+                 (leftWingFront, 'red'),
+                 (rightWingTop, 'blue'),
+                 (rightWingBottom, 'blue'),
+                 (rightWingBack, 'red'),
+                 (rightWingFront, 'red')]
+    return shipPrism
+
+def projectileModel(size):
+    backTop = [(-size, size, 0),
+               (size, size, 0),
+               (0, 0, -size*4)]
+    backBottom = [(-size, -size, 0),
+               (size, -size, 0),
+               (0, 0, -size*4)]
+    backLeft = [(-size, -size, 0),
+                (-size, size, 0),
+                (0, 0, -size*4)]
+    backRight = [(size, size, 0),
+                 (size, -size, 0),
+                 (0, 0, -size*4)]
+    frontTop = [(-size, size, 0),
+               (size, size, 0),
+               (0, 0, size*2)]
+    frontBottom = [(-size, -size, 0),
+               (size, -size, 0),
+               (0, 0, size*2)]
+    frontLeft = [(-size, -size, 0),
+                (-size, size, 0),
+                (0, 0, size*2)]
+    frontRight = [(size, size, 0),
+                 (size, -size, 0),
+                 (0, 0, size*2)]
+    projectilePrism = [(backTop, 'cyan'),
+                       (backBottom, 'cyan'),
+                       (backLeft, 'cyan'),
+                       (backRight, 'cyan'),
+                       (frontTop, 'cyan'),
+                       (frontBottom, 'cyan'),
+                       (frontLeft, 'cyan'),
+                       (frontRight, 'cyan')]
+    return projectilePrism 
+    
+
 class Obstacle(Shape):
 
     def __init__(self, shape, position, length):
@@ -130,8 +322,8 @@ class Ship(Shape):
         if self.boost != 0:
             self.speed += 1
             self.boost += 1
-        if self.boost > 12:
-            self.speed -= 12
+        if self.boost > 15:
+            self.speed -= 15
             self.boost = 0
         self.updateBoostCooldown()
 

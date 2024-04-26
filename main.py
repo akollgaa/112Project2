@@ -70,11 +70,14 @@ def playScreen_onScreenActivate(app):
     app.engine = Graphics(app.width, app.height)
     app.player = 0 # Index for the ship array
     app.endOfBuildings = 0
+    app.thirdPerson = True
     addShapes(app)
 
 def addShapes(app):
     # We must have a ship
-    app.engine.addShip(createRectangularPrism(1, 2, 1), 'Adam', 2, 4, 30)
+
+    #app.engine.addShip(createRectangularPrism(1, 2, 1), 'Adam', 2, 4, 30)
+    app.engine.addShip(shipModel(0.5), 'Adam', 2, 4, 30)
     # We must have a ground
     floor = [(-(app.xBounds + 25), 0, 500),
              (-(app.xBounds + 25), 0, -500),
@@ -85,16 +88,16 @@ def addShapes(app):
     # Create a sequences of random heights of buildings
     for i in range(0, 20):
         height = random.randrange(20, 50)
-        building1 = createRectangularPrism(10, 10, height)
+        building1 = createBuilding(10, 10, height)
         height2 = random.randrange(20, 50)
-        building2 = createRectangularPrism(10, 10, height2)
+        building2 = createBuilding(10, 10, height2)
         # Center of buildings are 20 units from middle
         app.engine.addShape(building1, [app.xBounds + 5, height / 2, app.buildingDistance * i])
         app.engine.addShape(building2, [-(app.xBounds + 5), height2 / 2, app.buildingDistance * i])
         app.endOfBuildings += 1
 
 def playScreen_redrawAll(app):
-    shapes, shapeIndexes, ground, groundIndexes = app.engine.render()
+    shapes, shapeIndexes, ground, groundIndexes = app.engine.render(app.thirdPerson)
     # First we must draw the ground
     allPoints = ground[groundIndexes[0]][0]
     colors = ground[groundIndexes[0]][1]
@@ -149,28 +152,38 @@ def drawCameraStatus(app):
 {app.engine.ships[app.player].position[2]:0.1f})', 50, 140)
 
 def playScreen_onKeyPress(app, key):
-    if key == 'w':
+    if key == 'w' and app.thirdPerson:
         app.move.append('w')
         app.tilt.append('w')
-    elif key == 's':
+    elif key == 's' and app.thirdPerson:
         app.move.append('s')
         app.tilt.append('s')
-    elif key == 'd':
+    elif key == 'd' and app.thirdPerson:
         app.move.append('d')
         app.tilt.append('d')
-    elif key == 'a':
+    elif key == 'a' and app.thirdPerson:
         app.move.append('a')
         app.tilt.append('a')
     elif key == 'space':
-        laser = createRectangularPrism(0.5, 2, 0.5)
+        laser = projectileModel(0.25)
         # Make sure the laser is not inside in the ship
         app.engine.addProjectile(laser, 8, 10, 2, app.engine.ships[app.player].position)
     elif key == 'm':
         setActiveScreen('menuScreen')
     elif key == 'f':
         app.engine.ships[app.player].startBoost()
+    elif key == 'h':
+        app.thirdPerson = not app.thirdPerson
+        if app.thirdPerson:
+            app.engine.cameraOrientation = (-15, 0, 0.5)
+            app.engine.moveCameraPosition(0, 4, -12)
+        else:
+            app.move = []
+            app.tilt = []
+            app.engine.cameraPosition = app.engine.ships[app.player].position
 
 def playScreen_onKeyRelease(app, key):
+    if not app.thirdPerson: return
     if key == 'w' and 'w' in app.move and 'w' in app.tilt:
         app.move.remove('w')
         app.tilt.remove('w')
@@ -185,14 +198,45 @@ def playScreen_onKeyRelease(app, key):
         app.tilt.remove('a')
 
 def playScreen_onMouseMove(app, mouseX, mouseY):
+    if app.thirdPerson: return
     # Controlling camera orientation based on mouse position
     y = ((mouseX / app.width)) * 180 - 90
     r = app.engine.cameraOrientation[1]
     x = (1 - (mouseY / app.height)) * 180 - 90
-    app.engine.cameraOrientation = [x, r, y]
+
+    if x > 5: 
+        if 'w' not in app.move: app.move.append('w')
+    elif x < -5:
+        if 's' not in app.move: app.move.append('s')
+    else:
+        if 'w' in app.move:
+            app.move.remove('w')
+        if 's' in app.move:
+            app.move.remove('s')
+
+    if y > 5: 
+        if 'd' not in app.move: app.move.append('d')
+        r -= 2 if r > -25 else 0
+    elif y < -5:
+        if 'a' not in app.move: app.move.append('a')
+        r += 2 if r < 25 else 0
+    else:
+        if 'd' in app.move:
+            app.move.remove('d')
+        if 'a' in app.move:
+            app.move.remove('a')
+        if r > 0:
+            r -= 2
+        elif r < 0:
+            r += 2
+
+    app.engine.cameraOrientation = (x, r, y)
 
 def playScreen_onMousePress(app, mx, my):
-    app.engine.ships[app.player].startBarrelRoll()
+    if app.thirdPerson:
+        app.engine.ships[app.player].startBarrelRoll()
+    else: # Perform a barrel roll with the camera
+        pass
 
 def playScreen_onStep(app):
 
@@ -238,15 +282,17 @@ def playScreen_onStep(app):
         app.startTime = time.time()
 
     # Most of what is below is updating shape data 
-
-    app.engine.resetShipToCamera()
+    if app.thirdPerson:
+        app.engine.resetShipToCamera()
+    else:
+        app.engine.ships[app.player].position = app.engine.cameraPosition
 
     removed = app.engine.removeShapes()
     if removed: # If we removed shapes we then need to create a new building
         height = random.randrange(20, 50)
-        building1 = createRectangularPrism(10, 10, height)
+        building1 = createBuilding(10, 10, height)
         height2 = random.randrange(20, 50)
-        building2 = createRectangularPrism(10, 10, height2)
+        building2 = createBuilding(10, 10, height2)
         app.engine.addShape(building1, (app.xBounds + 5, height / 2, app.buildingDistance * app.endOfBuildings))
         app.engine.addShape(building2, (-(app.xBounds + 5), height2 / 2, app.buildingDistance * app.endOfBuildings))
         app.endOfBuildings += 1
@@ -256,7 +302,7 @@ def playScreen_onStep(app):
 
     for enemy in app.engine.enemies:
         if enemy.shoot():
-            laser = createRectangularPrism(0.5, 2, 0.5)
+            laser = projectileModel(0.75)
             pos = (enemy.position[0], enemy.position[1], enemy.position[2] - 5)
             app.engine.addProjectile(laser, -6, 5, 2, pos)
         for projectile in app.engine.projectiles:
@@ -303,7 +349,7 @@ def playScreen_onStep(app):
 
     # Randomly create an enemy
     if random.randrange(0, 40) < 1:
-        enemy = createRectangularPrism(4, 4, 4)
+        enemy = shipModel(2, True)
         x = random.randrange(-15, 15)
         y = random.randrange(10, 25)
         shipZ = app.engine.ships[app.player].position[2]
@@ -312,7 +358,7 @@ def playScreen_onStep(app):
 
     # Randomly create an obstacle
     if random.randrange(0, 40) < 1:
-        obstacle = createRectangularPrism(5, 5, 40)
+        obstacle = createObstacle(5, 5, 40)
         x = random.randrange(-20, 20)
         app.engine.addObstacle(obstacle, (x, 20, app.buildingDistance * app.endOfBuildings), 5)
 

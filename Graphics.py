@@ -13,8 +13,8 @@ class Graphics:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.cameraPosition = [0, 5, 0] # x, y, z
-        self.cameraOrientation = [-20, 0, 0] # pitch, roll, yaw
+        self.cameraPosition = (0, 5, 0) # x, y, z
+        self.cameraOrientation = (-15, 0, 0.5) # pitch, roll, yaw
         self.fov = math.pi / 2
         self.shapes = []
         self.ships = []
@@ -121,15 +121,15 @@ class Graphics:
 
     # Moves the camera by some constant direction
     def moveCameraPosition(self, dx, dy, dz):
-        self.cameraPosition[0] += dx
-        self.cameraPosition[1] += dy
-        self.cameraPosition[2] += dz
+        self.cameraPosition = (self.cameraPosition[0] + dx, 
+                               self.cameraPosition[1] + dy, 
+                               self.cameraPosition[2] + dz)
 
     # Moves the camera orientation by some constant direction
     def moveCameraOrientation(self, dp, dr, dy):
-        self.cameraOrientation[0] += dp
-        self.cameraOrientation[1] += dr
-        self.cameraOrientation[2] += dy
+        self.cameraOrientation = (self.cameraOrientation[0] + dp,
+                                  self.cameraOrientation[1] + dr,
+                                  self.cameraOrientation[2] + dy)
 
     # Takes angles in radians
     def moveFOV(self, angle):
@@ -185,6 +185,7 @@ class Graphics:
                                             [0, 0, 0, 1]])
         theta1 = (self.cameraOrientation[2]) * (math.pi / 180)
         theta2 = (self.cameraOrientation[0]) * (math.pi / 180)
+        theta3 = (self.cameraOrientation[1]) * (math.pi / 180)
         cameraRotationYMatrix = np.array([[ math.cos(theta1), 0, math.sin(theta1), 0],
                                           [                0, 1,                0, 0],
                                           [-math.sin(theta1), 0, math.cos(theta1), 0],
@@ -194,7 +195,11 @@ class Graphics:
                                           [0, math.cos(theta2), -math.sin(theta2), 0],
                                           [0, math.sin(theta2),  math.cos(theta2), 0],
                                           [0,                0,                 0, 1]])
-        rotationMatrix = np.dot(cameraRotationYMatrix, cameraRotationXMatrix)
+        cameraRotationZMatrix = np.array([[math.cos(theta3), -math.sin(theta3), 0, 0],
+                                          [math.sin(theta3),  math.cos(theta3), 0, 0],
+                                          [               0,                 0, 1, 0],
+                                          [               0,                 0, 0, 1]])
+        rotationMatrix = np.dot(np.dot(cameraRotationYMatrix, cameraRotationXMatrix), cameraRotationZMatrix)
         return np.dot(rotationMatrix, cameraTranslationMatrix)
     
     def createModelMatrix(self, position, orientation):
@@ -261,11 +266,12 @@ class Graphics:
             shapes[dist] = (allPoints, colors, sorted(indexes, reverse=False))
             shapeIndexes.append(dist)
 
-    def render(self):
+    def render(self, pov):
         shapes = dict()
         shapeIndexes = []
         self.renderListOfShapes(shapes, shapeIndexes, self.shapes)
-        self.renderListOfShapes(shapes, shapeIndexes, self.ships)
+        if pov: 
+            self.renderListOfShapes(shapes, shapeIndexes, self.ships)
         self.renderListOfShapes(shapes, shapeIndexes, self.projectiles)
         self.renderListOfShapes(shapes, shapeIndexes, self.enemies)
         self.renderListOfShapes(shapes, shapeIndexes, self.obstacles)
