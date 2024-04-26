@@ -1,4 +1,5 @@
 112 Project Option 3 4/26/24
+
 By: Adam Kollgaard
 
 File structure:
@@ -21,6 +22,8 @@ test.py - Random stuff to test python things
 
 Engine.py - An old version of the graphics engine. It is not used; deprecated :(
 
+Description
+-----------
 For my project, I created a game that is essientally very similiar to the game starfox.
 It is a endless version of the game that is more of a snippet to the actual game.
 Think of it like a demo or something similar. The main goal of the project was to
@@ -35,9 +38,13 @@ on the screen. At the end, I simply use drawPolygon to create the shapes. Then s
 list sorting can be done to figure out which object is closer to the camera to find
 what objects need to be drawn first. It is a relatively simple engine that uses a 
 lot information from the following sources:
+
 https://en.wikipedia.org/wiki/3D_projection
+
 https://www.3dgep.com/understanding-the-view-matrix/
+
 https://www.youtube.com/watch?v=EqNcqBdrNyI&ab_channel=pikuma
+
 
 After hitting the play button, the game starts a little animation and then you enter
 the actually playing part. The playing part uses WASD as the controls, space to shoot,
@@ -51,6 +58,7 @@ You can also hit z for extra camera data in the top left corner, but this is mos
 debugging purposes.
 
 GRADING SHORTCUTS:
+---------------
 You can press r at any moment to enter the actual playing part of the game. This works for any
 screen. Mostly if you want to skip the beginning animation.
 You can also press m while playing to enter back into the menu screen.
